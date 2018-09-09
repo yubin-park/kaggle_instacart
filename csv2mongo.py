@@ -12,6 +12,8 @@ def load_orders(data, fn):
         reader = csv.reader(f)
         header = next(reader)
         for row in tqdm(reader):
+            if row[2] in ["test"]:
+                continue 
             order_id = row[0]
             user_id = row[1]
             order_number = row[3]
@@ -27,7 +29,7 @@ def load_orders(data, fn):
             }
     return data
 
-def attach_products(data, fn):
+def attach_products(data, fn, prod_names):
     print("attaching products...")
     with open(fn, "r") as f:
         reader = csv.reader(f)
@@ -35,9 +37,12 @@ def attach_products(data, fn):
         for row in tqdm(reader):
             order_id = row[0]
             product_id = row[1]
+            product_name = product_id
+            if product_id in prod_names:
+                product_name = prod_names[product_id]
             if order_id not in data:
                 continue
-            data[order_id]["products"].append(product_id)         
+            data[order_id]["products"].append(product_name)         
     return data
 
 def transpose(data, fn):
@@ -47,6 +52,8 @@ def transpose(data, fn):
         reader = csv.reader(f)
         header = next(reader)
         for row in tqdm(reader):
+            if row[2] in ["test"]:
+                continue 
             order_id = row[0]
             user_id = row[1]
             data_new[user_id].append(data[order_id]) 
@@ -71,11 +78,19 @@ if __name__=="__main__":
     fn_orders = "data/orders.csv"
     fn_order_products_1 = "data/order_products__prior.csv"
     fn_order_products_2 = "data/order_products__train.csv"
+    fn_products = "data/products.csv"
+
+    prod_names = {}
+    with open(fn_products, "r") as f:
+        reader = csv.reader(f)
+        header = next(reader)
+        for row in reader:
+            prod_names[row[0]] = row[0] + " "+ row[1]
 
     data = {}
     data = load_orders(data, fn_orders)
-    data = attach_products(data, fn_order_products_1)
-    data = attach_products(data, fn_order_products_2)
+    data = attach_products(data, fn_order_products_1, prod_names)
+    data = attach_products(data, fn_order_products_2, prod_names)
     data = transpose(data, fn_orders)
     dump2mongo(data)
     
